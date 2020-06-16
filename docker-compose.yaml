@@ -1,0 +1,61 @@
+version: '3.3'
+
+services:
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    restart: unless-stopped
+    volumes:
+      # Volumen raíz de WordPress
+      - ./wp_data_root:/var/www/html
+      # Archivo configuración ini
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    expose:
+      - '80'
+    networks:
+      - wp_net
+
+  proxy-letsencrypt:
+    restart: unless-stopped
+    environment:
+      TERM: xterm
+      LETSENCRYPT_DOMAINS: "domain"
+      LETSENCRYPT_PRINCIPAL: "domain"
+      LETSENCRYPT_EMAIL: "domain@domain.com"
+    image: 4eixos/letsencrypt
+    links:
+      - "wordpress:site0"
+    ports:
+      - "443:443"
+      - "80:80"
+    networks:
+      - wp_net
+    volumes:
+      - "wp_ssl:/etc/letsencrypt/"
+      - "wp_ssl-lib:/var/lib/letsencrypt"
+
+  db:
+    image: mysql:5.7
+    volumes:
+      - ./db_data:/var/lib/mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    networks:
+      - wp_net
+
+networks:
+  wp_net:
+volumes:
+  db_data:
+  wp_data_root:
+  wp_ssl:
+  wp_ssl-lib:
